@@ -10,6 +10,10 @@ After connected, input the PTY device path and enter. For example
 	/dev/pts/4
 Now the PTY stream is forwarded, type another enter to see the output.
 
+Or you can run
+    ./remoteConsole.sh /dev/pts/4
+to have a raw mode PTY, escape key is ctrl + ].
+
 
 Problems:
 CPU usage is high when the input/output throughput is high. Saving CPU usage is hard because we can not wait for big chunk of data and forward in one batch, instead, we must forward data back and forth instantly. Every time we call os.read from the PTY device, we just get 3 or 5 characters, so when there are a lot of data arriving, os.read is called very frequently, thus the CPU usage is high. To lower the CPU usage, we can add some waits between the os.read calls to accumulate big chunk of data but the user will feel the console is not reacted to the input instantly and may notice the delay. A experimental CPU saving feature is added to the gevent and multiprocess implementation of ptyforward.
