@@ -3,11 +3,14 @@
 import sys
 import os
 import errno
+import time
 
 from multiprocessing import Process
 import socket as gsocket
 
 _printerr = sys.stderr.write
+
+LAGTIME = 0.010  # second
 
 
 def _safeShutdown(client, how):
@@ -65,12 +68,18 @@ def _joinAny(processes):
 def _forwardPtyRead(pty, client, addr):
     _printerr('forwardPryRead enter\n')
     try:
+        lastTime = time.time()
         while True:
             data = os.read(pty, 4096)
             if len(data) == 0:
                 break
             if not _writeAll(client.send, None, data):
                 break
+            thisTime = time.time()
+            delta = thisTime - lastTime
+            lastTime = thisTime
+            if delta < LAGTIME:
+                time.sleep(LAGTIME - delta)
     finally:
         _safeShutdown(client, gsocket.SHUT_WR)
         _printerr('forwardPryRead exit %r\n' % (addr, ))
@@ -79,12 +88,18 @@ def _forwardPtyRead(pty, client, addr):
 def _forwardPtyWrite(pty, client, addr):
     _printerr('forwardPryWrite enter\n')
     try:
+        lastTime = time.time()
         while True:
             data = client.recv(4096)
             if len(data) == 0:
                 break
             if not _writeAll(os.write, pty, data):
                 break
+            thisTime = time.time()
+            delta = thisTime - lastTime
+            lastTime = thisTime
+            if delta < LAGTIME:
+                time.sleep(LAGTIME - delta)
     finally:
         _printerr('forwardPryWrite exit %r\n' % (addr, ))
 
