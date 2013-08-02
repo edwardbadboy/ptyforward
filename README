@@ -1,19 +1,58 @@
 Forward a PTY device to network
 
-Usage:
-1. Start ptyforward
-	./ptyforward 8888
+Dependency:
+Install latest gevent and ws4py
+  pip install gevent --upgrade
+  pip install ws4py
+
+Websocket PTY Usage:
+0. Start QEMU with isa-serial and chardev as follow
+    -chardev pty,id=charserial0 \
+    -device isa-serial,chardev=charserial0,id=serial0
+  Or add a serial port pty device in virt-manager for the VM
+
+  Boot the VM, when in grub, edit the kernel arguments, append
+   console=ttyS0
+
+1. Start ptyforwardWebSocket as the same host running QEMU
+    sudo ./ptyforwardWebSocket.py 8888
+
+2. Open wspty/wspty.html in a modern browser
+
+3. In the web page, fill the fields with the following
+    Host: 127.0.0.1 or the host ip
+    Port: 8888
+    PTY dev: /dev/pts/X ,which is the pty device qemu created
+
+  Do not tick Encrypt, click "Connect", press ENTER in the center black screen.
+
+
+Common PTY forward Usage:
+0. Start QEMU with isa-serial and chardev as follow
+    -chardev pty,id=charserial0 \
+    -device isa-serial,chardev=charserial0,id=serial0
+  Or add a serial port pty device in virt-manager for the VM
+
+  Boot the VM, when in grub, edit the kernel arguments, append
+   console=ttyS0
+
+1. Start ptyforward as the same host running QEMU
+	sudo ./ptyforward 8888
 
 2. Connect to ptyforward
-	nc 127.0.0.1 8888
-After connected, input the PTY device path and enter. For example
-	/dev/pts/4
-Now the PTY stream is forwarded, type another enter to see the output.
+    nc 127.0.0.1 8888
+  After connected, input the PTY device path and enter. For example
+    /dev/pts/4
+  Now the PTY stream is forwarded, type another enter to see the output.
 
-Or you can run
+  Or you can run
     ./remoteConsole.sh /dev/pts/4
-to have a raw mode PTY, escape key is ctrl + ].
+  to have a raw mode PTY, escape key is ctrl + ].
 
 
 Problems:
-CPU usage is high when the input/output throughput is high. Saving CPU usage is hard because we can not wait for big chunk of data and forward in one batch, instead, we must forward data back and forth instantly. Every time we call os.read from the PTY device, we just get 3 or 5 characters, so when there are a lot of data arriving, os.read is called very frequently, thus the CPU usage is high. To lower the CPU usage, we can add some waits between the os.read calls to accumulate big chunk of data but the user will feel the console is not reacted to the input instantly and may notice the delay. A experimental CPU saving feature is added to the gevent and multiprocess implementation of ptyforward.
+CPU usage is high when the input/output throughput is high. Saving CPU usage is hard because we can not wait for big chunk of data and forward in one batch, instead, we must forward data back and forth instantly. Every time we call os.read from the PTY device, we just get 3 or 5 characters, so when there are a lot of data arriving, os.read is called very frequently, thus the CPU usage is high. To lower the CPU usage, we can add some waits between the os.read calls to accumulate big chunk of data but the user will feel the console is not reacted to the input instantly and may notice the delay. A experimental CPU saving feature is added to the gevent and multiprocess implementation of ptyforward. It is also observed that after we set kernel.sched_min_granularity_ns = 10000000 and kernel.sched_wakeup_granularity_ns = 15000000, which means using coarser schedual time slice, the CPU usage is dropped greately.
+
+
+Notes:
+Contets in wspty sub-directory is copied from project websockify, with some modifications by me to suit into ptyforwardWebSocket.
